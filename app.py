@@ -1,47 +1,91 @@
 import os
 from flask import Flask, request, flash, render_template, redirect
-from forms import LoginForm
-from flask_login import LoginManager, login_required
+from flask_debugtoolbar import DebugToolbarExtension
+from forms import LoginForm, CreateUserForm
+from models import db, connect_db, User
+from flask_login import LoginManager, login_required, login_user, current_user
+from flask_bcrypt import Bcrypt
 
 app = Flask(__name__)
 
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', "it's a secret")
+
+app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'postgresql:///flask_login')
+
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['DEBUG_TB_INTERCEPT_REDIRECTS'] = False
+app.config['SQLALCHEMY_ECHO'] = True
+toolbar = DebugToolbarExtension(app)
+
+connect_db(app)
+
+# instantiate and initialize login manager
 login_manager = LoginManager()
 login_manager.init_app(app)
 
-app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', "it's a secret")
+# instantiate bcrypt
+bcrypt = Bcrypt()
 
 @app.route('/', methods=['GET'])
 def home():
     return render_template('home.html')
 
+# connects flask-login users with database users
 @login_manager.user_loader
 def load_user(user_id):
-    return User.get(user_id)
+    return User.query.get(user_id)
 
+@app.route('/createuser', methods=['GET', 'POST'])
+def create_user():
+    form = CreateUserForm()
+    if form.validate_on_submit():
+        try:
+            import pdb; pdb.set_trace()
+            user = User.create_user(form.username.data, form.password.data)
+
+            if not user:
+                raise
+            
+            login_user(user)
+
+            return redirect('/admin', user=user.username)
+        except:
+            print('Unable to create user.')
+            return redirect('/')
+    return render_template('create_user.html', form=form)
+
+
+# GET request returns login page with login
+# POST request authenticates user and redirects to admin page
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     form = LoginForm()
     if form.validate_on_submit():
-        login_user(user)
+        try:
+            user = User.query.filter_by(username=form.username.data).first()
+            is_authorized = bcrypt.check_password_hash(user.password, form.password.data)
 
-        flask.flash('Logged in successfully.')
+            if not user and not is_authorized:
+                raise
 
-        next = flask.request.args.get('next')
+            login_user(user)
 
-        if not is_safe_url(next):
-            return flask.abort(400)
-        
-        return flask.redirect(next or flask.url_for('index'))
+            flash('Logged in successfully.')
+            return redirect('/admin')
+        except:
+            print('Invalid username/password')
+            return redirect('/')
     print(form.errors)
     return render_template('login.html', form=form)
 
 @app.route('/admin', methods=['GET'])
 @login_required
 def admin_page():
-    return render_template('admin.html')
+    return render_template('admin.html', user=current_user.username)
 
 @app.route("/logout")
 @login_required
 def logout():
     logout_user()
+    flask.flash('Logout successful.')
     return redirect('/')
