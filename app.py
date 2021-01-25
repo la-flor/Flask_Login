@@ -1,14 +1,16 @@
 import os
-from flask import Flask, request, flash, render_template, redirect
+from flask import Flask, request, render_template, redirect
 from flask_debugtoolbar import DebugToolbarExtension
 from forms import LoginForm, CreateUserForm
-from models import db, connect_db, User
+
 from flask_login import LoginManager, login_required, login_user, current_user
 from flask_bcrypt import Bcrypt
 
+from flask_sqlalchemy import SQLAlchemy
+
 app = Flask(__name__)
 
-app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', "it's a secret")
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', "you should have a password in your config file")
 
 app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'postgresql:///flask_login')
 
@@ -17,38 +19,45 @@ app.config['DEBUG_TB_INTERCEPT_REDIRECTS'] = False
 app.config['SQLALCHEMY_ECHO'] = True
 toolbar = DebugToolbarExtension(app)
 
+
+db = SQLAlchemy()
+from models import connect_db, User
 connect_db(app)
 
 # instantiate and initialize login manager
 login_manager = LoginManager()
+login_manager.login_view = 'app.login'
 login_manager.init_app(app)
 
 # instantiate bcrypt
 bcrypt = Bcrypt()
 
-@app.route('/', methods=['GET'])
-def home():
-    return render_template('home.html')
-
 # connects flask-login users with database users
 @login_manager.user_loader
 def load_user(user_id):
-    return User.query.get(user_id)
+    try:
+        user = User.query.get(user_id)
+    except:
+        return None
+
+
+@app.route('/', methods=['GET'])
+def home():
+    return render_template('home.html')
 
 @app.route('/createuser', methods=['GET', 'POST'])
 def create_user():
     form = CreateUserForm()
     if form.validate_on_submit():
         try:
-            import pdb; pdb.set_trace()
             user = User.create_user(form.username.data, form.password.data)
 
             if not user:
                 raise
             
-            login_user(user)
+            # login_user(user)
 
-            return redirect('/admin', user=user.username)
+            return redirect('/')
         except:
             print('Unable to create user.')
             return redirect('/')
@@ -59,6 +68,8 @@ def create_user():
 # POST request authenticates user and redirects to admin page
 @app.route('/login', methods=['GET', 'POST'])
 def login():
+    if current_user.is_authenticated:
+        return redirect('/admin')
     form = LoginForm()
     if form.validate_on_submit():
         try:
@@ -81,7 +92,7 @@ def login():
 @app.route('/admin', methods=['GET'])
 @login_required
 def admin_page():
-    return render_template('admin.html', user=current_user.username)
+    return render_template('admin.html')
 
 @app.route("/logout")
 @login_required

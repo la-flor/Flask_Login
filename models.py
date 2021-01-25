@@ -1,6 +1,5 @@
-from flask_sqlalchemy import SQLAlchemy
+from app import db
 from flask_login import UserMixin
-db = SQLAlchemy()
 
 from flask_bcrypt import Bcrypt
 
@@ -13,8 +12,7 @@ class User(UserMixin, db.Model):
     __tablename__ = "users"
 
     id = db.Column(db.Integer,
-                    primary_key=True,
-                    autoincrement=True)
+                    primary_key=True)
     
     username = db.Column(db.Text,
                             unique=True,
@@ -35,7 +33,10 @@ class User(UserMixin, db.Model):
             password=hashed_pwd,
         )
 
+        import pdb; pdb.set_trace()
         db.session.add(user)
+        db.session.commit()
+
         return user
     
     # @classmethod
