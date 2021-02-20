@@ -2,9 +2,6 @@ from app import db
 from flask_login import UserMixin
 
 from flask_bcrypt import Bcrypt
-
-
-# instantiate bcrypt
 bcrypt = Bcrypt()
 
 class User(UserMixin, db.Model):
@@ -33,15 +30,21 @@ class User(UserMixin, db.Model):
             password=hashed_pwd,
         )
 
-        import pdb; pdb.set_trace()
         db.session.add(user)
         db.session.commit()
 
         return user
     
-    # @classmethod
-    # def authenticate(cls, username, password):
-    #     """Find user with 'username' and 'password'.
+    @classmethod
+    def is_valid(cls, username, password):
+        """Find user with 'username' and 'password'."""
+
+        user = cls.query.filter_by(username=username).first()
+        is_authorized = bcrypt.check_password_hash(user.password, password)
+        if is_authorized:
+            return user
+        else:
+            raise AssertionError("Unable to validate user info.")
         
 
 
