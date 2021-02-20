@@ -6,6 +6,11 @@
     <title>Admin Page</title>
 </head>
 <body>
-    <h1>This is the Admin Page {{ current_user.username}} - Login required</h1>
+
+    {% for category, message in get_flashed_messages(with_categories=True) %}
+        <div class="alert alert-{{ category }}">{{ message }}</div>
+    {% endfor %}
+
+    <h1>Welcome to the Admin Page: {{ current_user.username}}</h1>
 </body>
 </html>

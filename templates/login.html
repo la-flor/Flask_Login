@@ -7,10 +7,26 @@
 </head>
 <body>
     <h1>Login Page</h1>
+
+    {% for category, message in get_flashed_messages(with_categories=True) %}
+        <div class="alert alert-{{ category }}">{{ message }}</div>
+    {% endfor %}
+
     <form method="POST" action="/login">
+
+        {{ form.hidden_tag() }}
         {{ form.csrf_token }}
-        {{ form.username.label }} {{ form.username }}
-        {{ form.password.label }} {{ form.password }}
+
+        {% for field in form if field.widget.input_type != 'hidden' %}
+
+            {{ field(placeholder=field.label.text, class="form-control") }}
+
+            {% for error in field.errors %}
+                <span class="text-danger">{{ error }}</span>
+            {% endfor %}
+            <br>
+        {% endfor %}
+
         <input type="submit" value="Login">
     </form>
 </body>
