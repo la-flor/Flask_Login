@@ -4,12 +4,13 @@ This project is meant for Flask-Login practice as well as creating a boilerplate
 
 ## Installation
 
-Create your virtual environment, install packages, and run the application.
+Create your virtual environment, install packages, create database, and run the application.
 
 ```bash
 python3 -m venv venv
 . venv/bin/activate
 pip install -r requirements.txt
+python build.py
 ```
 
 ## Usage
